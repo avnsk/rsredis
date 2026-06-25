@@ -1,5 +1,5 @@
-use std::net::{TcpListener, TcpStream};
 use std::io::{Read, Write};
+use std::net::{TcpListener, TcpStream};
 fn handle_client(mut stream: TcpStream) {
     println!("New connection: {}", stream.peer_addr().unwrap());
     let mut buffer = [0; 512];
@@ -11,12 +11,12 @@ fn handle_client(mut stream: TcpStream) {
             let raw_command = String::from_utf8_lossy(&buffer[..bytes_read]);
             println!("Received: {}", raw_command);
 
-        let body = match raw_command.find("\r\n\r\n") {
-                Some(index) => &raw_command[index + 4..], 
-                None => &raw_command,                     
+            let body = match raw_command.find("\r\n\r\n") {
+                Some(index) => &raw_command[index + 4..],
+                None => &raw_command,
             };
 
-          let response = format!(
+            let response = format!(
                 "HTTP/1.1 200 OK\r\n\
                 Content-Type: text/plain\r\n\
                 Content-Length: {}\r\n\
