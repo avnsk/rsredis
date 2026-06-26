@@ -1,39 +1,49 @@
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+
 fn handle_client(mut stream: TcpStream) {
     println!("New connection: {}", stream.peer_addr().unwrap());
-    let mut buffer = [0; 512];
-    match stream.read(&mut buffer) {
-        Ok(0) => {
-            println!("Client disconnected");
-        }
-        Ok(bytes_read) => {
-            let raw_command = String::from_utf8_lossy(&buffer[..bytes_read]);
-            println!("Received: {}", raw_command);
+    loop {
+        let mut buffer = [0; 512];
+        match stream.read(&mut buffer) {
+            Ok(0) => {
+                println!("Client disconnected");
+                break;
+            }
+            Ok(bytes_read) => {
+                let raw_command = String::from_utf8_lossy(&buffer[..bytes_read]);
+                println!("Received: {}", raw_command);
 
-            let body = match raw_command.find("\r\n\r\n") {
-                Some(index) => &raw_command[index + 4..],
-                None => &raw_command,
-            };
+                let body = match raw_command.find("\r\n\r\n") {
+                    Some(index) => &raw_command[index + 4..],
+                    None => &raw_command,
+                };
 
-            let response = format!(
-                "HTTP/1.1 200 OK\r\n\
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\n\
                 Content-Type: text/plain\r\n\
                 Content-Length: {}\r\n\
-                Connection: close\r\n\
+                Connection: keep-alive\r\n\
                 \r\n\
                 {}",
-                body.len(),
-                body
-            );
-            if let Err(e) = stream.write(response.as_bytes()) {
-                println!("Failed to send response: {}", e);
+                    body.len(),
+                    body
+                );
+                if let Err(e) = stream.write(response.as_bytes()) {
+                    println!("Failed to send response: {}", e);
+                    break;
+                }
+                if let Err(e) = stream.flush() {
+                    println!("Flush failed: {}", e);
+                    break;
+                }
             }
-        }
-        Err(e) => {
-            println!("Error reading from client: {}", e);
-        }
-    };
+            Err(e) => {
+                println!("Error reading from client: {}", e);
+                break;
+            }
+        };
+    }
 }
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:7379").expect("Could not bind to port 7379");
