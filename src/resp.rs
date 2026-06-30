@@ -9,7 +9,7 @@ pub enum RespValue {
     Array(Vec<RespValue>),
 }
 
-fn decode(data: &[u8]) -> Result<RespValue, Box<dyn Error>> {
+pub fn decode(data: &[u8]) -> Result<RespValue, Box<dyn Error>> {
     if data.is_empty() {
         return Err("Empty data".to_string().into());
     }
@@ -44,6 +44,11 @@ fn read_error_data(data: &[u8]) -> Result<(RespValue, usize), Box<dyn Error>> {
     let mut pos = 1; // Skip '-'
     while pos < data.len() {
         if data[pos] == b'\r' {
+            if data[pos] < b'0' || data[pos] > b'9' {
+                return Err(
+                    format!("Expected numeric digit, found raw byte: {}", data[pos]).into(),
+                );
+            }
             let s = std::str::from_utf8(&data[1..pos])?.to_string();
             return Ok((RespValue::Error(s), pos + 2));
         }
@@ -56,6 +61,9 @@ fn read_integer(data: &[u8]) -> Result<(RespValue, usize), Box<dyn Error>> {
     let mut pos = 1;
     let mut number: i64 = 0;
     while pos < data.len() && data[pos] != b'\r' {
+        if data[pos] < b'0' || data[pos] > b'9' {
+            return Err(format!("Expected numeric digit, found raw byte: {}", data[pos]).into());
+        }
         number = number * 10 + (data[pos] - b'0') as i64;
         pos += 1;
     }
@@ -66,6 +74,9 @@ fn read_bulk_string(data: &[u8]) -> Result<(RespValue, usize), Box<dyn Error>> {
     let mut pos = 1;
     let mut number: usize = 0;
     while pos < data.len() && data[pos] != b'\r' {
+        if data[pos] < b'0' || data[pos] > b'9' {
+            return Err(format!("Expected numeric digit, found raw byte: {}", data[pos]).into());
+        }
         number = number * 10 + (data[pos] - b'0') as usize;
         pos += 1;
     }
@@ -83,6 +94,9 @@ fn read_array(data: &[u8]) -> Result<(RespValue, usize), Box<dyn Error>> {
     let mut pos = 1;
     let mut count: usize = 0;
     while pos < data.len() && data[pos] != b'\r' {
+        if data[pos] < b'0' || data[pos] > b'9' {
+            return Err(format!("Expected numeric digit, found raw byte: {}", data[pos]).into());
+        }
         count = count * 10 + (data[pos] - b'0') as usize;
         pos += 1;
     }

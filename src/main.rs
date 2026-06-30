@@ -14,11 +14,11 @@ fn handle_client(mut stream: TcpStream) {
             }
             Ok(bytes_read) => {
                 let raw_command = String::from_utf8_lossy(&buffer[..bytes_read]);
-                println!("Received: {}", raw_command);
-
-                let body = match raw_command.find("\r\n\r\n") {
-                    Some(index) => &raw_command[index + 4..],
-                    None => &raw_command,
+                println!("Received: {:?}", raw_command);
+                let raw_bytes: &[u8] = &buffer[..bytes_read];
+                let content = match resp::decode(raw_bytes) {
+                    Ok(res) => format!("+{:?}\r\n", res),
+                    Err(e) => format!("-ERR {}\r\n", e),
                 };
 
                 let response = format!(
@@ -28,8 +28,8 @@ fn handle_client(mut stream: TcpStream) {
                 Connection: keep-alive\r\n\
                 \r\n\
                 {}",
-                    body.len(),
-                    body
+                    content.len(),
+                    content
                 );
                 if let Err(e) = stream.write(response.as_bytes()) {
                     println!("Failed to send response: {}", e);
